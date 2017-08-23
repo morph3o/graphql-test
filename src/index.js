@@ -1,3 +1,6 @@
+const {execute, subscribe} = require('graphql');
+const {createServer} = require('http');
+const {SubscriptionServer} = require('subscriptions-transport-ws');
 const express = require('express');
 const bodyParser = require('body-parser');
 const {graphqlExpress, graphiqlExpress} = require('apollo-server-express');
@@ -28,14 +31,20 @@ const start = async () => {
     };
   };
 
+  const PORT = 3000;
   app.use('/graphql', bodyParser.json(), graphqlExpress(buildOptions));
+
   app.use('/graphiql', graphiqlExpress({
     endpointURL: '/graphql',
-    passHeader: `'Authorization': 'bearer token-pdivasto@gmail.com'`
+    passHeader: `'Authorization': 'bearer token-pdivasto@gmail.com'`,
+    subscriptionsEndpoint: `ws://localhost:${PORT}/subscriptions`
   }));
-
-  const PORT = 3000;
-  app.listen(PORT, () => {
+  const server = createServer(app);
+  server.listen(PORT, () => {
+    SubscriptionServer.create(
+      {execute, subscribe, schema},
+      {server, path: '/subscriptions'}
+    );
     console.log(`Hackernews GraphQL server running on port ${PORT}.`)
   });
 };

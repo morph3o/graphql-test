@@ -1,3 +1,4 @@
+const pubsub = require('../pubsub');
 const {ObjectID} = require('mongodb');
 const {URL} = require('url');
 
@@ -27,7 +28,11 @@ module.exports = {
       assertValidLink(data);
       const newLink = Object.assign({postedById: user && user._id}, data);
       const response = await Links.insert(newLink);
-      return Object.assign({id: response.insertedIds[0]}, newLink);
+
+      newLink.id = response.insertedIds[0];
+      pubsub.publish('Link', {Link: {mutation: 'CREATED', node: newLink}});
+
+      return newLink;
     },
     createUser: async (root, data, {mongo: {Users}}) => {
       const newUser = {
@@ -51,6 +56,12 @@ module.exports = {
       };
       const response = await Votes.insert(newVote);
       return Object.assign({id: response.insertedIds[0], newVote});
+    }
+  },
+
+  Subscription: {
+    Link: {
+      subscribe: () => pubsub.asyncIterator('Link')
     }
   },
 
